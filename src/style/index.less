@@ -1,0 +1,110 @@
+@color-border: #ccc;
+@color-row-moving-border: #4EBFCD;
+@color-cell-actived:#81c59e;
+@color-cell-moving: #F6E48E;
+
+@width-label: 100px;
+
+@prefixCls: timeslice;
+
+.@{prefixCls}__wrap {
+  background: #fff;
+  box-sizing: content-box;
+  ul,
+  li {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+}
+
+.@{prefixCls}-header {
+  display: flex;
+  text-align: center;
+  cursor: pointer;
+  &-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: @width-label;
+    border-top: 1px solid @color-border;
+    border-left: 1px solid @color-border;
+  }
+  &-content {
+    flex: 1;
+    border: 1px solid @color-border;
+    border-bottom: none;
+    &-hours {
+      border-top: 1px solid @color-border;
+      &--moving {
+        background: @color-cell-moving;
+      }
+    }
+  }
+  ul {
+    display: flex;
+    border-bottom: none;
+  }
+  li {
+    flex: 1;
+    & + li {
+      border-left: 1px solid @color-border;
+    }
+  }
+}
+
+.@{prefixCls}-row {
+  display: flex;
+  border: 1px solid @color-border;
+  border-bottom: none;
+  &:first-child {
+    border-bottom: 1px solid @color-border;
+  }
+  &[class~=timeslice-row--moving] + & {
+    border-top: none;
+  }
+  &-label {
+    min-width: @width-label;
+    border-right: 1px solid @color-border;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  &-content {
+    display: flex;
+    flex: 1;
+  }
+  &--moving {
+    border: 1px solid @color-row-moving-border;
+  }
+  li {
+    flex: 1;
+    height: 30px;
+    & + li {
+      border-left: 1px solid @color-border;
+    }
+  }
+}
+
+.@{prefixCls}__cell {
+  &--actived {
+    background: @color-cell-actived;
+  }
+  &--moving {
+    background: @color-cell-moving;
+    // &[class~='timeslice__cell--actived'] {
+    //   opacity: 0.6;
+    // }
+  }
+}
+
+.@{prefixCls}-footer {
+  border: 1px solid @color-border;
+  text-align: center;
+  color: #999;
+  font-size: 10px;
+  padding: 2px 0;
+  .@{prefixCls}-row--moving + & {
+    border-top: none;
+  }
+}
