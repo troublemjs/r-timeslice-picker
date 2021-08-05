@@ -1,9 +1,5 @@
 # r-timeslice-picker
 
-Timeslice Picker component.
-
-[TOC]
-
 [![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/troublemjs/r-timeslice-picker)
 
 [![NPM version][npm-image]][npm-url] [![dumi](https://img.shields.io/badge/docs%20by-dumi-blue?style=flat-square)](https://github.com/umijs/dumi) [![Test coverage][codecov-image]][codecov-url] [![Dependencies][david-image]][david-url] [![DevDependencies][david-dev-image]][david-dev-url] [![npm download][download-image]][download-url] [![bundle size][bundlephobia-image]][bundlephobia-url]
@@ -20,6 +16,8 @@ Timeslice Picker component.
 [download-url]: https://npmjs.org/package/r-timeslice-picker
 [bundlephobia-url]: https://bundlephobia.com/result?p=r-timeslice-picker
 [bundlephobia-image]: https://badgen.net/bundlephobia/minzip/r-timeslice-picker
+
+Timeslice Picker component.
 
 [TOC]
 
