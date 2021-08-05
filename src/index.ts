@@ -1,8 +1,7 @@
-import * as React from 'react'
 import TimeslicePicker from './TimeslicePicker';
 import Row from './Row';
-import { TimesliceValue } from './interface';
-// export type { TimesliceValue } from './interface';
+import { DAY_LIST } from './constants';
 
-export { Row, TimesliceValue };
+export { Row, DAY_LIST };
+
 export default TimeslicePicker;

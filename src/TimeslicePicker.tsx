@@ -1,38 +1,65 @@
-import * as React from 'react'
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import classnames from 'classnames';
 
 import Row from './Row';
 import Header from './Header';
-import TimeslicePickerContext from './context/TimeslicePickerContext';
 
-import { createNewValues, WEEKS } from './utils';
-import { TimesliceValue } from './interface';
-import './style/index.less';
+import { sortByDataSource } from './utils';
+import { HOURS, DAY_LIST } from './constants';
+import { ITimesliceValue } from './types';
 
 /** 修复赋值数据 */
-function fixControlledValue(value: TimesliceValue, idx: number): number[] {
+function fixControlledValue(
+  value: ITimesliceValue,
+  idx: number,
+): ITimesliceValue[keyof ITimesliceValue] {
   if (typeof value === 'undefined' || value === null) return [];
   return value[idx] || [];
 }
 
-// TODO: weeks 参数名修改，语义不符合，weeks 是多个周的含义
-interface TimeslicePickerProps {
-  weeks?: React.ReactText[];
+interface PickerProps
+  extends Omit<
+    React.HtmlHTMLAttributes<HTMLDivElement>,
+    'defaultValue' | 'onChange'
+  > {
+  /**
+   * @description 天集合的数据源
+   * @default `DAY_LIST`
+   */
+  dayList?: React.ReactText[];
+  /** 显示在头部的元素 */
+  header?: ReactNode;
+  /** 头部的元素的类名，不使用定义 header 是有效 */
+  headerClassName?: string;
+  /** 显示在底部的元素 */
   footer?: ReactNode;
-  defaultValue?: TimesliceValue;
-  value?: TimesliceValue;
-  onChange?: (value: TimesliceValue) => void;
+  /** 底部的元素的类名 */
+  footerClassName?: string;
+  /** 默认值，不可控组件 */
+  defaultValue?: ITimesliceValue;
+  /** 值，可控组件 */
+  value?: ITimesliceValue;
+  /** 值变化时触发 */
+  onChange?: (value: ITimesliceValue) => void;
 }
 
-const TimeslicePicker: React.FC<TimeslicePickerProps> = (props) => {
-  const { weeks, footer, defaultValue, value, onChange } = props;
-  // const value = useRef<number[] | number[][]>();
+const Picker: React.FC<PickerProps> = (props) => {
+  const {
+    dayList,
+    header,
+    headerClassName,
+    footer,
+    footerClassName,
+    defaultValue,
+    value,
+    onChange,
+    className,
+    ...restProps
+  } = props;
   const cacheState = useRef<string>(JSON.stringify(value));
   const [currentValue, setCurrentValue] = useState(
     typeof value === 'undefined' ? defaultValue : value,
   );
-  const [_v, _setv] = useState<number[]>([2, 5]);
 
   useEffect(() => {
     const cacheStr = JSON.stringify(value);
@@ -43,16 +70,26 @@ const TimeslicePicker: React.FC<TimeslicePickerProps> = (props) => {
   }, [value]);
 
   const prefixCls = classnames('timeslice');
-  const currentWeeks = weeks || [];
-  const isWeek = currentWeeks.length > 0;
+  const curDays = dayList || [];
 
-  const handleHeaderChange = (headerValue: number[]) => {
-    const len = currentWeeks?.length;
+  const handleHeaderChange = (selectedList: React.ReactText[]) => {
+    const len = curDays?.length;
     if (!len) return;
 
     const newCurrentValue = { ...currentValue } || {};
     for (let i = 0; i < len; i++) {
-      const newItem = createNewValues(newCurrentValue[i], headerValue);
+      // TODO: 处理和 Row 中的 onEnd() 内的冗余代码
+      const oldVals = (newCurrentValue[i] as React.ReactText[]) ?? [];
+      // 交集
+      const intersection = selectedList.filter((x) => oldVals?.includes(x));
+      // 差集
+      const difference = selectedList.filter((x) => !oldVals?.includes(x));
+
+      const disorderVals = oldVals
+        .concat(difference)
+        .filter((x) => !intersection.includes(x));
+      const newItem = sortByDataSource(HOURS, disorderVals);
+
       newCurrentValue[i] = newItem;
     }
     if (value === undefined) {
@@ -77,45 +114,35 @@ const TimeslicePicker: React.FC<TimeslicePickerProps> = (props) => {
     onChange?.(newCurrentValue);
   };
 
-  const content = currentWeeks.length ? (
-    currentWeeks.map((w, idx) => (
-      <Row
-        key={w}
-        label={w}
-        // value={currentValue ? currentValue[idx] || [] : []}
-        value={fixControlledValue(currentValue, idx)}
-        // value={[2, 4]}
-        onChange={(v) => handleChange(v, idx)}
-      />
-    ))
-  ) : (
+  const contentNodes = curDays?.map((d, idx) => (
     <Row
-      value={_v}
-      onChange={(value) => {
-        // console.log(value);
-        _setv(value);
-      }}
+      key={d}
+      label={d}
+      // showData
+      value={fixControlledValue(currentValue, idx)}
+      onChange={(v) => handleChange(v as number[], idx)}
+      // onChange={(list) => console.log(list)}
     />
+  ));
+  const headerNode = header ?? (
+    <Header className={headerClassName} onMoveEnd={handleHeaderChange} />
   );
 
   return (
-    <div className={`${prefixCls}__wrap`}>
-      <TimeslicePickerContext.Provider
-        value={{ isWeek, prefixCls }}
-      >
-        <Header onMoveEnd={handleHeaderChange} />
-        {content}
-      </TimeslicePickerContext.Provider>
-      <div className={`${prefixCls}-footer`}>
-        {footer || 'tips：鼠标拖动选择、点击选择或取消、右击取消整行'}
-      </div>
+    <div className={classnames(`${prefixCls}__wrap`, className)} {...restProps}>
+      {headerNode}
+      {contentNodes}
+      {footer && (
+        <div className={classnames(footerClassName, `${prefixCls}-footer`)}>
+          {footer}
+        </div>
+      )}
     </div>
   );
 };
 
-TimeslicePicker.defaultProps = {
-  weeks: WEEKS,
-  // weeks: [],
+Picker.defaultProps = {
+  dayList: DAY_LIST,
 };
 
-export default TimeslicePicker;
+export default Picker;

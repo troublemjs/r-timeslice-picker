@@ -1,11 +1,5 @@
-import * as React from 'react'
-import {
-  ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import * as React from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import classnames from 'classnames';
 import { fromEvent, iif, of } from 'rxjs';
 import {
@@ -16,63 +10,109 @@ import {
   tap,
   mergeMap,
   filter,
-  debounceTime,
-  buffer,
 } from 'rxjs/operators';
 
 import Cell from './Cell';
-import {
-  createArrayFromRange,
-  createNewValues,
-  HOURS,
-  isMoving,
-} from './utils';
+import { isMoving, range, sortByDataSource } from './utils';
+import { HOURS, LEFT_BTN_CODE } from './constants';
 
-const getEventValue = (e: Event) => {
-  const target = e.target as Element;
-  return Number(target.getAttribute('data-value'));
-};
+interface IHandleEvent extends Event {
+  target: Element;
+}
+const getAttr = (attr: string, e: IHandleEvent) => e.target.getAttribute(attr);
+const getEventIdx = (e: Event) =>
+  Number(getAttr('data-idx', e as IHandleEvent));
+// const getEventValue = (e: Event) => {
+//   const target = e.target as Element;
+//   return Number(target.getAttribute('data-value'));
+// };
 
-function fixControlledValue<T>(value: T) {
-  if (typeof value === 'undefined' || value === null) return [] as T[];
+function fixControlledValue<T>(value: T): T | T[] {
+  if (typeof value === 'undefined' || value === null) return [];
   return value;
 }
 
-interface RowProps {
+type ValueType = React.ReactText;
+interface RowProps
+  extends Omit<
+    React.HtmlHTMLAttributes<HTMLDivElement | HTMLUListElement>,
+    'defaultValue' | 'onChange'
+  > {
   prefixCls?: string;
+  /** 每个行的标注 */
   label?: string | ReactNode;
-  defaultValue?: number[];
-  value?: number[];
-  onChange?: (value: number[]) => void;
-  /** 清除当前已选中 */
-  beforeClear?: (done: VoidFunction) => void;
+  /**
+   * 显示在每个 cell 中的数据源，值要唯一
+   * @default `HOURS`
+   */
+  dataSource?: ValueType[];
+  defaultValue?: ValueType[];
+  value?: ValueType[];
+  /** 值变化时触发 */
+  onChange?: (valueList: ValueType[], indexList?: number[]) => void;
+  /**
+   * 清除当前已选中的回调
+   * @param [VoidFunction] reset - 完成后执行重置
+   * @description `onContextMenu`执行，改为清除已选中的方法
+   */
+  beforeClear?: (reset: VoidFunction) => void;
+  /** 是否在 cell 中显示 dataSource 中的数据 */
+  showData?: boolean;
 }
 
+// TODO: Row 无参传入时，没有高度问题
+
 const Row: React.FC<RowProps> = (props) => {
-  const { prefixCls, label, defaultValue, value, onChange, beforeClear } = props;
+  const {
+    prefixCls,
+    label,
+    dataSource,
+    defaultValue,
+    value,
+    onChange,
+    beforeClear,
+    showData,
+    className,
+    ...restProps
+  } = props;
+
   const [within, setWithin] = useState(false);
-  const [moveValues, setMoveValues] = useState<number[]>([]);
-  const [resultValues, setResultValues] = useState<number[]>(
+  const [moveRange, setMoveRange] = useState<[number, number]>();
+  const [resultValues, setResultValues] = useState<ValueType[]>(
     typeof value === 'undefined' ? defaultValue : value,
   );
   const cacheState = useRef<string>(fixControlledValue(resultValues).join());
   const ref = useRef<HTMLUListElement>();
 
   const onEnd = useCallback(
-    (range: number[]) => {
-      // console.log('onEnd range:', range);
-      const currentValues = createArrayFromRange(range);
-      const newResult = createNewValues(resultValues, currentValues);
-      // console.log('newResult:', newResult);
-      
+    (vals: number[]) => {
+      const idxRange = vals as [number, number];
+      // console.log('onEnd range:', idxRange);
+      const oldVals = [...(resultValues ?? [])];
+      // const curSelectedVals = createArrayFromRange(idxRange);
+      const idxs = range(idxRange);
+      const curSelectedVals = dataSource?.filter((...[, idx]) =>
+        idxs.includes(idx),
+      );
+
+      // 交集
+      const intersection = curSelectedVals.filter((x) => oldVals?.includes(x));
+      // 差集
+      const difference = curSelectedVals.filter((x) => !oldVals?.includes(x));
+
+      const disorderVals = oldVals
+        .concat(difference)
+        .filter((x) => !intersection.includes(x));
+      const ret = sortByDataSource(dataSource, disorderVals);
+
+      // value 有值时组件为可控组件
       if (value === undefined) {
-        // setCurrentValue(val);
-        setResultValues(newResult);
+        setResultValues(ret);
       }
 
-      onChange?.(newResult);
+      onChange?.(ret, idxs);
       setWithin(false);
-      setMoveValues([]);
+      setMoveRange(undefined);
     },
     [onChange, resultValues, value],
   );
@@ -81,29 +121,28 @@ const Row: React.FC<RowProps> = (props) => {
     const mouseDown$ = fromEvent(ref.current, 'mousedown')
       .pipe(
         filter((e) => {
-          const LEFT_BUTTON = 0;
           const code = (e as MouseEvent).button;
-          return code === LEFT_BUTTON;
+          return code === LEFT_BTN_CODE;
         }),
         // tap((x) => {
         //   console.log(`start: ${x}`);
         // }),
         switchMap((startEvent) =>
           fromEvent(document, 'mousemove').pipe(
-            throttleTime(100),
+            throttleTime(50),
             mergeMap((moveEvent) =>
               iif(
                 () =>
                   (moveEvent.target as Element).parentElement === ref.current,
                 of([startEvent, moveEvent]).pipe(
-                  map((events) => events.map(getEventValue)),
+                  map((events) => events.map(getEventIdx)),
                 ),
                 of([]),
               ),
             ),
             takeUntil(
               fromEvent(document, 'mouseup').pipe(
-                map((endEvent) => [startEvent, endEvent].map(getEventValue)),
+                map((endEvent) => [startEvent, endEvent].map(getEventIdx)),
                 tap(onEnd),
               ),
             ),
@@ -111,10 +150,10 @@ const Row: React.FC<RowProps> = (props) => {
         ),
       )
       .subscribe(
-        (values) => {
-          // console.log('ret: ', values);
-          setWithin(() => Boolean(values.length));
-          setMoveValues(() => values);
+        (range) => {
+          // console.log('ret: ', range);
+          setWithin(() => Boolean(range.length));
+          setMoveRange(range as [number, number]);
         },
         (err) => {
           console.log('err', err);
@@ -134,61 +173,69 @@ const Row: React.FC<RowProps> = (props) => {
     }
   }, [value]);
 
-  const clearResultValues = () => {
+  const resetResultValues = () => {
     setResultValues([]);
-    onChange?.([]);
+    onChange?.([], []);
   };
 
   const onContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!resultValues?.length) return;
-    
+
     if (typeof beforeClear === 'function') {
-      beforeClear(clearResultValues);
+      beforeClear(resetResultValues);
     } else {
-      clearResultValues();
+      resetResultValues();
     }
   };
 
-  const classname = classnames(`${prefixCls}-row`, {
+  const classNames = classnames(`${prefixCls}-row`, className, {
     [`${prefixCls}-row--moving`]: within,
   });
+  const contentProps = { className: classNames };
+  Object.assign(
+    contentProps,
+    label
+      ? {
+          className: `${prefixCls}-row-content`,
+        }
+      : restProps,
+  );
 
-  const conetntNode = (
-    <ul
-      className={label ? `${prefixCls}-row-content` : classname}
-      ref={ref}
-      // onDoubleClick={onDoubleClick}
-      onContextMenu={onContextMenu}
-    >
-      {HOURS.map((value) => {
-        const moving = isMoving(value, moveValues);
-        const actived = resultValues?.includes(value);
+  const contentNode = (
+    <ul ref={ref} onContextMenu={onContextMenu} {...contentProps}>
+      {dataSource?.map((val, idx) => {
+        const moving = isMoving(idx, moveRange);
+        const actived = resultValues?.includes(val);
 
         return (
           <Cell
-            key={value}
-            value={value}
+            key={val}
+            prefixCls={prefixCls}
+            data-idx={idx}
             actived={actived}
             moving={moving}
-            // onClick={() => {console.log(111)}}
-          />
+          >
+            {showData && val}
+          </Cell>
         );
       })}
     </ul>
   );
-  if (!label) return conetntNode;
+  if (!label) return contentNode;
 
   return (
-    <div className={classname}>
+    <div className={classNames} {...restProps}>
       <div className={`${prefixCls}-row-label`}>{label}</div>
-      {conetntNode}
+      {contentNode}
     </div>
   );
 };
 
 Row.defaultProps = {
-  prefixCls: 'timeslice'
-}
+  prefixCls: 'timeslice',
+  // showData: true,
+  dataSource: HOURS,
+};
 
 export default Row;

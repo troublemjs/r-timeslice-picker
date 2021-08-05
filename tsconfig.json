@@ -1,26 +1,31 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "esnext",
     "module": "esnext",
-    "strict": true,
-    "jsx": "react",
-    "importHelpers": false,
     "moduleResolution": "node",
+    "importHelpers": true,
+    "jsx": "react",
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "declaration": true,
-    "declarationDir": "lib/types",
     "sourceMap": true,
-    "baseUrl": ".",
+    "baseUrl": "./",
+    "strict": true,
     "strictNullChecks": false,
-    "allowJs": true,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@@/*": ["src/.umi/*"],
+      "r-timeslice-picker": ["src/index.tsx"]
     },
-    "lib": ["esnext", "dom", "dom.iterable", "scripthost"]
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "lib",
+    "es",
+    "dist",
+    "typings",
+    "**/__test__",
+    "test",
+    "docs",
+    "tests"
+  ]
 }

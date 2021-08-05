@@ -1,0 +1,59 @@
+@import 'variables.less';
+
+.@{prefixCls}-row {
+  user-select: none;
+  display: flex;
+  border: 1px solid @color-border;
+  .ulStyle();
+  &-label {
+    min-width: @width-label;
+    border-right: 1px solid @color-border;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  &-content {
+    .ulStyle();
+    display: flex;
+    flex: 1;
+  }
+  &--moving {
+    border: 1px solid @color-row-moving-border;
+  }
+  &--border-t-0 {
+    border-top-width: 0;
+  }
+  &--border-r-0 {
+    border-right-width: 0;
+  }
+  &--border-b-0 {
+    border-bottom-width: 0;
+  }
+  &--border-l-0 {
+    border-left-width: 0;
+  }
+  li {
+    flex: 1;
+    & + li {
+      border-left: 1px solid @color-border;
+    }
+  }
+}
+
+.@{prefixCls}__cell {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  &--actived {
+    background: @color-cell-actived;
+    color: #fff;
+  }
+  &--moving {
+    background: @color-cell-moving;
+    color: inherit;
+    // &[class~='timeslice__cell--actived'] {
+    //   opacity: 0.6;
+    // }
+  }
+}
